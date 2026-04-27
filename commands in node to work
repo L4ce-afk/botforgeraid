@@ -1,0 +1,7 @@
+npm init -y
+npm install mineflayer ws
+npm install readline chalk
+node -v
+node server.js
+
+if there is an error in the modules use:      npm install
