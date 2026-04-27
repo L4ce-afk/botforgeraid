@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BotForge - Minecraft Bot Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #060a0f;
+    --panel: #0b1017;
+    --card: #0f1822;
+    --border: #1a2d3d;
+    --accent: #00e5ff;
+    --accent2: #00ff88;
+    --accent3: #ff3c5a;
+    --accent4: #ffb800;
+    --text: #c9e0f0;
+    --muted: #4a6a80;
+    --glow: 0 0 18px rgba(0,229,255,0.3);
+    --glow2: 0 0 18px rgba(0,255,136,0.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* scanline overlay */
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+    pointer-events:none;z-index:9999;
+  }
+
+  /* grid bg */
+  .bg-grid{
+    position:fixed;inset:0;
+    background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none;z-index:0;
+  }
+
+  .container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px;}
+
+  /* HEADER */
+  header{display:flex;align-items:center;justify-content:space-between;padding:20px 0 30px;border-bottom:1px solid var(--border);}
+  .logo{display:flex;align-items:center;gap:14px;}
+  .logo-icon{width:48px;height:48px;position:relative;}
+  .logo-icon svg{width:48px;height:48px;}
+  .logo-text h1{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:var(--accent);letter-spacing:3px;text-shadow:var(--glow);}
+  .logo-text p{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;}
+  .header-status{display:flex;align-items:center;gap:20px;}
+  .ws-badge{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);padding:8px 16px;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:12px;}
+  .ws-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);animation:blink 1s infinite;}
+  .ws-dot.connected{background:var(--accent2);box-shadow:var(--glow2);}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .header-clock{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--muted);}
+
+  /* STATS TOP */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0;}
+  .stat-card{background:var(--card);border:1px solid var(--border);padding:18px 20px;position:relative;overflow:hidden;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat-card.s1::before{background:linear-gradient(90deg,var(--accent),transparent);}
+  .stat-card.s2::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+  .stat-card.s3::before{background:linear-gradient(90deg,var(--accent3),transparent);}
+  .stat-card.s4::before{background:linear-gradient(90deg,var(--accent4),transparent);}
+  .stat-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .stat-val{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;}
+  .stat-card.s1 .stat-val{color:var(--accent);text-shadow:var(--glow);}
+  .stat-card.s2 .stat-val{color:var(--accent2);text-shadow:var(--glow2);}
+  .stat-card.s3 .stat-val{color:var(--accent3);}
+  .stat-card.s4 .stat-val{color:var(--accent4);}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace;}
+
+  /* MAIN GRID */
+  .main-grid{display:grid;grid-template-columns:380px 1fr;gap:20px;}
+
+  /* CONTROL PANEL */
+  .control-panel{display:flex;flex-direction:column;gap:16px;}
+  .panel-card{background:var(--card);border:1px solid var(--border);padding:22px;}
+  .panel-title{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+  .panel-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+  .field input,.field select{
+    width:100%;background:#080e14;border:1px solid var(--border);color:var(--text);
+    padding:11px 14px;font-family:'Share Tech Mono',monospace;font-size:13px;
+    outline:none;transition:border-color 0.2s,box-shadow 0.2s;
+  }
+  .field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,0.1);}
+  .field select option{background:#0b1017;}
+
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* SLIDER */
+  .slider-wrap{position:relative;}
+  .slider-wrap input[type=range]{
+    width:100%;-webkit-appearance:none;height:4px;
+    background:linear-gradient(90deg,var(--accent) var(--pct,0%),var(--border) var(--pct,0%));
+    outline:none;cursor:pointer;
+  }
+  .slider-wrap input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--accent);border:2px solid var(--bg);box-shadow:var(--glow);cursor:pointer;
+  }
+  .slider-display{display:flex;justify-content:space-between;margin-top:8px;}
+  .slider-display span{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--accent);}
+  .slider-display small{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);align-self:flex-end;}
+
+  /* BUTTONS */
+  .btn-launch{
+    width:100%;padding:16px;font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;
+    letter-spacing:3px;text-transform:uppercase;cursor:pointer;border:none;
+    background:linear-gradient(135deg,var(--accent),#0090aa);color:#000;
+    position:relative;overflow:hidden;transition:transform 0.1s,box-shadow 0.2s;
+    box-shadow:0 4px 20px rgba(0,229,255,0.3);
+  }
+  .btn-launch:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,255,0.5);}
+  .btn-launch:active{transform:translateY(0);}
+  .btn-launch:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .btn-launch::before{
+    content:'';position:absolute;top:-50%;left:-60%;width:50%;height:200%;
+    background:rgba(255,255,255,0.2);transform:skewX(-20deg);
+    transition:left 0.4s;
+  }
+  .btn-launch:hover::before{left:130%;}
+
+  .btn-stop{
+    width:100%;padding:14px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;
+    letter-spacing:3px;cursor:pointer;border:1px solid var(--accent3);
+    background:transparent;color:var(--accent3);transition:all 0.2s;
+  }
+  .btn-stop:hover{background:rgba(255,60,90,0.1);box-shadow:0 0 20px rgba(255,60,90,0.2);}
+  .btn-stop:disabled{opacity:0.3;cursor:not-allowed;}
+
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+  .btn-sm{
+    padding:10px;font-family:'Share Tech Mono',monospace;font-size:12px;cursor:pointer;
+    border:1px solid var(--border);background:transparent;color:var(--text);
+    transition:all 0.2s;letter-spacing:1px;
+  }
+  .btn-sm:hover{border-color:var(--accent4);color:var(--accent4);}
+
+  /* PROGRESS */
+  .progress-wrap{margin-top:6px;}
+  .progress-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;}
+  .progress-bar-bg{height:8px;background:var(--border);overflow:hidden;}
+  .progress-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width 0.3s;box-shadow:var(--glow2);}
+
+  /* RIGHT PANEL */
+  .right-panel{display:flex;flex-direction:column;gap:16px;}
+
+  /* BOT GRID */
+  .bot-grid-wrap{background:var(--card);border:1px solid var(--border);padding:22px;flex:1;}
+  .bot-grid{display:flex;flex-wrap:wrap;gap:4px;max-height:340px;overflow-y:auto;padding-right:4px;}
+  .bot-grid::-webkit-scrollbar{width:4px;}
+  .bot-grid::-webkit-scrollbar-track{background:var(--border);}
+  .bot-grid::-webkit-scrollbar-thumb{background:var(--accent);}
+  .bot-chip{
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    font-family:'Share Tech Mono',monospace;font-size:9px;border:1px solid;
+    position:relative;cursor:default;transition:transform 0.1s;
+    animation:chipIn 0.3s ease backwards;
+  }
+  @keyframes chipIn{from{opacity:0;transform:scale(0.5);}to{opacity:1;transform:scale(1);}}
+  .bot-chip:hover{transform:scale(1.3);z-index:10;}
+  .bot-chip.status-connecting{border-color:var(--accent4);color:var(--accent4);background:rgba(255,184,0,0.08);}
+  .bot-chip.status-online{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,136,0.08);}
+  .bot-chip.status-error{border-color:var(--accent3);color:var(--accent3);background:rgba(255,60,90,0.08);}
+  .bot-chip.status-kicked{border-color:var(--muted);color:var(--muted);background:transparent;}
+  .bot-chip.status-online::after{
+    content:'';position:absolute;top:2px;right:2px;width:4px;height:4px;
+    border-radius:50%;background:var(--accent2);box-shadow:0 0 4px var(--accent2);
+  }
+
+  /* CONSOLE */
+  .console-wrap{background:#050a0e;border:1px solid var(--border);padding:0;}
+  .console-header{
+    padding:12px 18px;background:var(--card);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .console-header span{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;color:var(--accent);}
+  .console-btns{display:flex;gap:8px;}
+  .console-btn{
+    padding:4px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;
+    border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;
+    transition:all 0.15s;
+  }
+  .console-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .console-body{height:260px;overflow-y:auto;padding:14px 18px;font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.8;}
+  .console-body::-webkit-scrollbar{width:4px;}
+  .console-body::-webkit-scrollbar-thumb{background:var(--accent);}
+  .log-line{display:flex;gap:12px;align-items:flex-start;}
+  .log-time{color:var(--muted);flex-shrink:0;font-size:10px;}
+  .log-tag{padding:1px 7px;font-size:10px;flex-shrink:0;}
+  .log-tag.INFO{background:rgba(0,229,255,0.1);color:var(--accent);border:1px solid rgba(0,229,255,0.2);}
+  .log-tag.OK{background:rgba(0,255,136,0.1);color:var(--accent2);border:1px solid rgba(0,255,136,0.2);}
+  .log-tag.ERR{background:rgba(255,60,90,0.1);color:var(--accent3);border:1px solid rgba(255,60,90,0.2);}
+  .log-tag.WARN{background:rgba(255,184,0,0.1);color:var(--accent4);border:1px solid rgba(255,184,0,0.2);}
+  .log-msg{color:var(--text);}
+
+  /* TOAST */
+  #toast{
+    position:fixed;top:24px;right:24px;z-index:99999;
+    background:var(--card);border:1px solid var(--accent2);
+    padding:14px 22px;font-family:'Share Tech Mono',monospace;font-size:13px;
+    color:var(--accent2);box-shadow:var(--glow2);
+    transform:translateX(120%);transition:transform 0.3s;
+  }
+  #toast.show{transform:translateX(0);}
+  #toast.err{border-color:var(--accent3);color:var(--accent3);}
+
+  /* Legend */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+  .legend-dot{width:8px;height:8px;border-radius:50%;}
+
+  /* SECTION TITLES */
+  .section-tag{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;}
+
+  /* Responsive */
+  @media(max-width:900px){
+    .main-grid{grid-template-columns:1fr;}
+    .stats-row{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div id="toast"></div>
+
+<div class="container">
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="40" height="40" rx="4" stroke="#00e5ff" stroke-width="1.5" fill="none"/>
+          <rect x="10" y="10" width="12" height="12" rx="1" fill="#00e5ff" opacity="0.8"/>
+          <rect x="26" y="10" width="12" height="12" rx="1" fill="#00ff88" opacity="0.8"/>
+          <rect x="10" y="26" width="12" height="12" rx="1" fill="#00ff88" opacity="0.8"/>
+          <rect x="26" y="26" width="12" height="12" rx="1" fill="#00e5ff" opacity="0.8"/>
+          <circle cx="24" cy="24" r="4" fill="#00e5ff" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>BOTFORGE</h1>
+        <p>// MINECRAFT BOT MANAGER v2.0</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="ws-badge">
+        <div class="ws-dot" id="wsDot"></div>
+        <span id="wsLabel">WS: DESCONECTADO</span>
+      </div>
+      <div class="header-clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card s1">
+      <div class="stat-label">Total de Bots</div>
+      <div class="stat-val" id="statTotal">0</div>
+      <div class="stat-sub">limite: 999</div>
+    </div>
+    <div class="stat-card s2">
+      <div class="stat-label">Online</div>
+      <div class="stat-val" id="statOnline">0</div>
+      <div class="stat-sub">conectados</div>
+    </div>
+    <div class="stat-card s3">
+      <div class="stat-label">Erros</div>
+      <div class="stat-val" id="statError">0</div>
+      <div class="stat-sub">falhas</div>
+    </div>
+    <div class="stat-card s4">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-val" id="statUptime">00:00</div>
+      <div class="stat-sub">mm:ss</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-grid">
+    <!-- CONTROL -->
+    <div class="control-panel">
+      <div class="panel-card">
+        <div class="panel-title">Configuracao do Servidor</div>
+
+        <div class="field">
+          <label>IP / Host do Servidor</label>
+          <input type="text" id="serverHost" placeholder="play.exemplo.com" value=""/>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Porta</label>
+            <input type="number" id="serverPort" placeholder="25565" value="25565"/>
+          </div>
+          <div class="field">
+            <label>Versao MC</label>
+            <select id="mcVersion">
+              <option value="1.8.9">1.8.9</option>
+              <option value="1.12.2">1.12.2</option>
+              <option value="1.16.5">1.16.5</option>
+              <option value="1.18.2">1.18.2</option>
+              <option value="1.19.4">1.19.4</option>
+              <option value="1.20.1" selected>1.20.1</option>
+              <option value="1.20.4">1.20.4</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Modo Auth</label>
+          <select id="authMode">
+            <option value="offline" selected>Offline (Cracked)</option>
+            <option value="microsoft">Microsoft (Premium)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Configuracao dos Bots</div>
+
+        <div class="field">
+          <label>Quantidade de Bots: <span id="botCountLabel" style="color:var(--accent);font-family:'Orbitron',sans-serif;">100</span></label>
+          <div class="slider-wrap">
+            <input type="range" id="botCount" min="1" max="999" value="100"/>
+          </div>
+          <div class="slider-display">
+            <span id="botCountVal">100</span>
+            <small>MAX: 999</small>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Delay (ms)</label>
+            <input type="number" id="spawnDelay" value="300" min="50" max="5000"/>
+          </div>
+          <div class="field">
+            <label>Prefixo Nome</label>
+            <input type="text" id="botPrefix" value="Bot" maxlength="8"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Progresso de Launch</label>
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <small id="progText">Aguardando...</small>
+              <small id="progPct">0%</small>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progBar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Controles</div>
+        <button class="btn-launch" id="btnLaunch" onclick="launchBots()">
+          INICIAR BOTS
+        </button>
+        <div style="height:10px;"></div>
+        <button class="btn-stop" id="btnStop" onclick="stopAllBots()" disabled>
+          PARAR TODOS OS BOTS
+        </button>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn-sm" onclick="stopAllBots();setTimeout(launchBots,1000)">REINICIAR</button>
+          <button class="btn-sm" onclick="clearConsole()">LIMPAR LOG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-panel">
+      <div class="bot-grid-wrap">
+        <div class="panel-title">Mapa de Bots em Tempo Real</div>
+        <div class="bot-grid" id="botGrid">
+          <div style="color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:12px;padding:20px;">Nenhum bot ativo...</div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent4);"></div>Conectando</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent2);"></div>Online</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent3);"></div>Erro</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--muted);"></div>Kicked</div>
+        </div>
+      </div>
+
+      <div class="console-wrap">
+        <div class="console-header">
+          <span>// CONSOLE AO VIVO</span>
+          <div class="console-btns">
+            <button class="console-btn" onclick="clearConsole()">LIMPAR</button>
+            <button class="console-btn" onclick="exportLog()">EXPORTAR</button>
+          </div>
+        </div>
+        <div class="console-body" id="consoleBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let bots = {};
+let ws = null;
+let launchInterval = null;
+let uptimeInterval = null;
+let startTime = null;
+let logLines = [];
+let isLaunching = false;
+let totalLaunched = 0;
+let simulMode = false;
+
+// ============================================================
+// CLOCK
+// ============================================================
+setInterval(()=>{
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toTimeString().slice(0,8);
+},1000);
+
+// ============================================================
+// SLIDER
+// ============================================================
+const slider = document.getElementById('botCount');
+function updateSlider(){
+  const v = slider.value;
+  const pct = ((v-1)/(999-1))*100;
+  slider.style.setProperty('--pct', pct+'%');
+  document.getElementById('botCountLabel').textContent = v;
+  document.getElementById('botCountVal').textContent = v;
+}
+slider.addEventListener('input', updateSlider);
+updateSlider();
+
+// ============================================================
+// CONSOLE
+// ============================================================
+function log(msg, type='INFO'){
+  const now = new Date().toTimeString().slice(0,8);
+  logLines.push({t:now, type, msg});
+  const body = document.getElementById('consoleBody');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-tag ${type}">${type}</span><span class="log-msg">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+  if(logLines.length > 300){
+    body.removeChild(body.firstChild);
+    logLines.shift();
+  }
+}
+
+function clearConsole(){
+  document.getElementById('consoleBody').innerHTML = '';
+  logLines = [];
+  log('Console limpo.','INFO');
+}
+
+function exportLog(){
+  const txt = logLines.map(l=>`[${l.t}] [${l.type}] ${l.msg}`).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
+  a.download = 'botforge_log.txt';
+  a.click();
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats(){
+  const all = Object.values(bots);
+  const online = all.filter(b=>b.status==='online').length;
+  const errs = all.filter(b=>b.status==='error'||b.status==='kicked').length;
+  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statOnline').textContent = online;
+  document.getElementById('statError').textContent = errs;
+}
+
+// ============================================================
+// UPTIME
+// ============================================================
+function startUptime(){
+  startTime = Date.now();
+  clearInterval(uptimeInterval);
+  uptimeInterval = setInterval(()=>{
+    if(!startTime){return;}
+    const elapsed = Math.floor((Date.now()-startTime)/1000);
+    const m = String(Math.floor(elapsed/60)).padStart(2,'0');
+    const s = String(elapsed%60).padStart(2,'0');
+    document.getElementById('statUptime').textContent = m+':'+s;
+  },1000);
+}
+
+// ============================================================
+// BOT GRID
+// ============================================================
+function renderBot(id, status){
+  const grid = document.getElementById('botGrid');
+  const existing = document.getElementById('chip-'+id);
+  if(existing){
+    existing.className = 'bot-chip status-'+status;
+    existing.title = id+' ['+status.toUpperCase()+']';
+    return;
+  }
+  if(grid.querySelector('div[style]')){grid.innerHTML='';}
+  const chip = document.createElement('div');
+  chip.className = 'bot-chip status-'+status;
+  chip.id = 'chip-'+id;
+  const num = id.replace(/\D/g,'');
+  chip.textContent = num.length>3 ? num.slice(-3) : num;
+  chip.title = id+' ['+status.toUpperCase()+']';
+  grid.appendChild(chip);
+}
+
+function removeBot(id){
+  const chip = document.getElementById('chip-'+id);
+  if(chip) chip.remove();
+  delete bots[id];
+  updateStats();
+}
+
+// ============================================================
+// PROGRESS
+// ============================================================
+function setProgress(done, total){
+  const pct = total>0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('progBar').style.width = pct+'%';
+  document.getElementById('progPct').textContent = pct+'%';
+  document.getElementById('progText').textContent = `${done} / ${total} bots`;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, err=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show'+(err?' err':'');
+  setTimeout(()=>{ t.className=''; },3000);
+}
+
+// ============================================================
+// WEBSOCKET
+// ============================================================
+function connectWS(){
+  try{
+    ws = new WebSocket('ws://localhost:8080');
+
+    ws.onopen = ()=>{
+      document.getElementById('wsDot').classList.add('connected');
+      document.getElementById('wsLabel').textContent = 'WS: CONECTADO';
+      log('WebSocket conectado ao backend Node.js.','OK');
+      simulMode = false;
+    };
+
+    ws.onclose = ()=>{
+      document.getElementById('wsDot').classList.remove('connected');
+      document.getElementById('wsLabel').textContent = 'WS: DESCONECTADO';
+      log('WebSocket desconectado. Modo simulacao ativado.','WARN');
+      simulMode = true;
+      setTimeout(connectWS, 5000);
+    };
+
+    ws.onerror = ()=>{
+      simulMode = true;
+      document.getElementById('wsLabel').textContent = 'WS: SIMULACAO';
+      log('Backend nao encontrado. Rodando em modo simulacao.','WARN');
+    };
+
+    ws.onmessage = (ev)=>{
+      try{
+        const data = JSON.parse(ev.data);
+        handleServerMsg(data);
+      }catch(e){}
+    };
+  }catch(e){
+    simulMode = true;
+    log('WebSocket indisponivel. Modo simulacao ativo.','WARN');
+  }
+}
+
+function handleServerMsg(data){
+  if(data.event === 'bot_spawn'){
+    bots[data.id] = {status:'connecting'};
+    renderBot(data.id,'connecting');
+    updateStats();
+  }
+  if(data.event === 'bot_online'){
+    bots[data.id] = {status:'online'};
+    renderBot(data.id,'online');
+    updateStats();
+  }
+  if(data.event === 'bot_error'){
+    bots[data.id] = {status:'error'};
+    renderBot(data.id,'error');
+    log(`Bot ${data.id} erro: ${data.msg||'desconhecido'}`,'ERR');
+    updateStats();
+  }
+  if(data.event === 'bot_kicked'){
+    bots[data.id] = {status:'kicked'};
+    renderBot(data.id,'kicked');
+    log(`Bot ${data.id} foi kickado.`,'WARN');
+    updateStats();
+  }
+  if(data.event === 'log'){
+    log(data.msg, data.level||'INFO');
+  }
+}
+
+// ============================================================
+// SIMULATION MODE (quando backend nao esta rodando)
+// ============================================================
+function simulateBot(botId, delay){
+  setTimeout(()=>{
+    bots[botId] = {status:'connecting'};
+    renderBot(botId,'connecting');
+    updateStats();
+
+    const onlineDelay = 500 + Math.random()*2000;
+    setTimeout(()=>{
+      const roll = Math.random();
+      if(roll < 0.08){
+        bots[botId] = {status:'error'};
+        renderBot(botId,'error');
+        log(`Bot ${botId} falhou ao conectar ao servidor.`,'ERR');
+      } else if(roll < 0.14){
+        bots[botId] = {status:'kicked'};
+        renderBot(botId,'kicked');
+        log(`Bot ${botId} kickado pelo servidor.`,'WARN');
+      } else {
+        bots[botId] = {status:'online'};
+        renderBot(botId,'online');
+      }
+      updateStats();
+    }, onlineDelay);
+  }, delay);
+}
+
+// ============================================================
+// LAUNCH
+// ============================================================
+function launchBots(){
+  const host = document.getElementById('serverHost').value.trim();
+  const port = parseInt(document.getElementById('serverPort').value)||25565;
+  const version = document.getElementById('mcVersion').value;
+  const auth = document.getElementById('authMode').value;
+  const count = parseInt(document.getElementById('botCount').value);
+  const delay = parseInt(document.getElementById('spawnDelay').value)||300;
+  const prefix = document.getElementById('botPrefix').value.trim()||'Bot';
+
+  if(!host){
+    toast('Insira o IP do servidor!', true);
+    log('Erro: IP do servidor nao informado.','ERR');
+    return;
+  }
+
+  if(count>999){
+    toast('Limite maximo: 999 bots!', true);
+    return;
+  }
+
+  bots = {};
+  document.getElementById('botGrid').innerHTML = '';
+  updateStats();
+  isLaunching = true;
+
+  document.getElementById('btnLaunch').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+
+  log(`Iniciando ${count} bots em ${host}:${port} (${version}) [${auth}]`,'INFO');
+  log(`Delay entre bots: ${delay}ms | Prefixo: ${prefix}`,'INFO');
+
+  if(simulMode || !ws || ws.readyState !== 1){
+    log('Modo simulacao: bots sendo criados localmente.','WARN');
+    toast('Modo simulacao ativo - backend offline');
+  } else {
+    ws.send(JSON.stringify({
+      action: 'launch',
+      host, port, version, auth,
+      count, delay, prefix
+    }));
+    log('Comando enviado ao backend Node.js.','OK');
+    toast('Bots enviados ao servidor!');
+  }
+
+  startUptime();
+  let launched = 0;
+
+  launchInterval = setInterval(()=>{
+    if(!isLaunching || launched >= count){
+      clearInterval(launchInterval);
+      if(isLaunching){
+        log(`Todos os ${count} bots foram disparados!`,'OK');
+        toast(`${count} bots no servidor!`);
+        document.getElementById('btnLaunch').disabled = false;
+        isLaunching = false;
+      }
+      return;
+    }
+
+    launched++;
+    const botId = `${prefix}${String(launched).padStart(4,'0')}`;
+
+    if(simulMode || !ws || ws.readyState !== 1){
+      simulateBot(botId, 0);
+    }
+
+    setProgress(launched, count);
+
+    if(launched % 50 === 0 || launched === count){
+      log(`${launched}/${count} bots disparados para ${host}:${port}`,'INFO');
+    }
+  }, simulMode ? Math.max(10, delay/5) : delay);
+}
+
+// ============================================================
+// STOP
+// ============================================================
+function stopAllBots(){
+  isLaunching = false;
+  clearInterval(launchInterval);
+  clearInterval(uptimeInterval);
+
+  if(ws && ws.readyState===1){
+    ws.send(JSON.stringify({action:'stop_all'}));
+  }
+
+  const count = Object.keys(bots).length;
+  bots = {};
+  document.getElementById('botGrid').innerHTML = '';
+  updateStats();
+  setProgress(0,0);
+  document.getElementById('progText').textContent = 'Aguardando...';
+  document.getElementById('statUptime').textContent = '00:00';
+
+  document.getElementById('btnLaunch').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+
+  log(`${count} bots parados e desconectados.`,'WARN');
+  toast('Todos os bots foram parados.');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+log('BotForge v2.0 inicializado.','INFO');
+log('Configure o servidor e clique em INICIAR BOTS.','INFO');
+log('Para funcionar com bots reais, rode o server.js (Node.js).','WARN');
+connectWS();
+</script>
+
+<!-- ============================================================
+BACKEND NODE.JS (server.js) - SALVE SEPARADO E RODE COM: node server.js
+
+const mineflayer = require('mineflayer');
+const { WebSocketServer } = require('ws');
+const wss = new WebSocketServer({ port: 8080 });
+const activeBots = {};
+
+wss.on('connection', (client) => {
+  console.log('[BotForge] Frontend conectado via WebSocket.');
+
+  client.on('message', async (raw) => {
+    const data = JSON.parse(raw);
+
+    if (data.action === 'launch') {
+      const { host, port, version, auth, count, delay, prefix } = data;
+
+      for (let i = 1; i <= count; i++) {
+        await new Promise(res => setTimeout(res, delay));
+        const username = `${prefix}${String(i).padStart(4,'0')}`;
+        const botId = username;
+
+        client.send(JSON.stringify({ event: 'bot_spawn', id: botId }));
+
+        try {
+          const bot = mineflayer.createBot({ host, port, username, version, auth: auth==='offline'?'offline':'microsoft' });
+          activeBots[botId] = bot;
+
+          bot.once('spawn', () => {
+            client.send(JSON.stringify({ event: 'bot_online', id: botId }));
+          });
+
+          bot.on('kicked', (reason) => {
+            client.send(JSON.stringify({ event: 'bot_kicked', id: botId, msg: reason }));
+            delete activeBots[botId];
+          });
+
+          bot.on('error', (err) => {
+            client.send(JSON.stringify({ event: 'bot_error', id: botId, msg: err.message }));
+            delete activeBots[botId];
+          });
+        } catch (e) {
+          client.send(JSON.stringify({ event: 'bot_error', id: botId, msg: e.message }));
+        }
+      }
+    }
+
+    if (data.action === 'stop_all') {
+      Object.values(activeBots).forEach(b => { try { b.quit(); } catch(e){} });
+      for (const k in activeBots) delete activeBots[k];
+      client.send(JSON.stringify({ event: 'log', level: 'OK', msg: 'Todos os bots desconectados pelo servidor.' }));
+    }
+  });
+});
+
+console.log('[BotForge] Backend rodando na porta 8080');
+// ============================================================ -->
+</body>
+</html>
